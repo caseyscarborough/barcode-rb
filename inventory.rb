@@ -1,11 +1,7 @@
 #!/Users/Casey/.rvm/rubies/ruby-2.0.0-rc1/bin/ruby
 require 'csv'
 
-#Get the command-line arguments
-ARGV.each do|a|
-	puts "Argument: #{a}"
-end
-
+$database_filename = "./inventory.accdb" 
 def display_help
 	# define the help variable which holds the help text
 	help = 
@@ -31,8 +27,7 @@ Parameters:
 end
 
 def load_file(everything)
-	filename = "./inventory.db"
-	database_file = File.open(filename)
+	database_file = File.open($database_filename)
 	database_contents = Array.new{Array.new}
 	i = 0
 	database_file.each do |line|
@@ -53,14 +48,19 @@ def load_file(everything)
 			end
 		else
 			new_filename = ARGV[1].to_s
-			if (File.file?(new_filename))
-				File.delete(new_filename)
-			end
-			database_contents.each do |a|
-				require 'csv'
-					CSV.open(new_filename, "ab") do |csv|
-					  csv << [a[0], a[1], a[2], a[3], a[4], a[5]]
+			if (new_filename.end_with?(".tsv"))
+				if (File.file?(new_filename))
+					File.delete(new_filename)
 				end
+				database_contents.each do |a|
+					require 'csv'
+					CSV.open(new_filename, "ab", {:col_sep => "\t"}) do |csv|
+					  csv << [a[0], a[1], a[2], a[3], a[4], a[5]]
+					end
+				end
+				puts "File was successfully created!"
+			else
+				puts "File format must be .tsv!"
 			end
 		end
 	else
@@ -77,6 +77,57 @@ def load_file(everything)
 	end
 end
 
+def update_inventory
+	if (ARGV[1] == nil)
+		puts "\n-u requires an <infile>"
+		puts "Usage: ruby inventory.rb [?|-h|help|[-u|-o|-z <infile>|[<outfile>]]]"
+	else
+		if (!ARGV[1].to_s.end_with?(".csv") || ARGV[1] == nil)
+			puts "\nInvalid file format – unable to proceed."
+			puts "Usage: ruby inventory.rb [?|-h|help|[-u|-o|-z <infile>|[<outfile>]]]"
+		else
+			filename = "./" << ARGV[1]
+
+			# Attempt to open user csv file. If not found, abort program.
+			begin
+				data_file = File.open($database_filename)
+			# Instead of asking for new file name, abort if file not found.
+			rescue
+				abort "Database file not found - aborting."
+			end
+
+			csv_input = Array.new{Array.new}
+
+			i = 0
+			data_file.each do |line|
+				csv_input[i] = line.split(",").map(&:strip)
+				i += 1
+			end
+
+			# Attempt to open user csv file. If not found, abort program.
+			begin
+				csv_file = File.open(filename, "r")
+			# Instead of asking for new file name, abort if file not found.
+			rescue
+				abort "Input file #{ARGV[1]} not found - aborting."
+			end
+
+			CSV.foreach(filename) do |row|
+				csv_input << row
+			end
+
+			CSV.open($database_filename, "w") do |csv|
+				csv_input.each do |a|
+					csv << [a[0], a[1], a[2], a[3], a[4], a[5]]
+				end
+			end
+
+			# Update successful
+			puts "Updated #{csv_file.count} database records successfully"
+		end
+	end
+end
+
 if (ARGV[0] == "?" or ARGV[0] == "-h" or ARGV[0] == "help")
 	display_help
 elsif (ARGV[0] == "-u")
@@ -86,8 +137,7 @@ elsif (ARGV[0] == "-u")
 		if (!ARGV[1].to_s.end_with?(".csv"))
 			puts "The filename is not of type CSV."
 		else
-			# update_inventory(ARGV[1])
-			puts "The filename ends with CSV."
+			update_inventory
 		end
 	end
 elsif (ARGV[0] == "-o")
