@@ -26,14 +26,23 @@ Parameters:
 	puts help
 end
 
-def load_file(everything)
-	database_file = File.open($database_filename)
-	database_contents = Array.new{Array.new}
-	i = 0
-	database_file.each do |line|
-		database_contents[i] = line.split(",").map(&:strip)
-		i += 1
+def load_database_file
+	begin
+		database_file = File.open($database_filename)
+		database_contents = Array.new{Array.new}
+		i = 0
+		database_file.each do |line|
+			database_contents[i] = line.split(",").map(&:strip)
+			i += 1
+		end
+		return database_contents
+	rescue
+		"Unable to continue - database file #{$database_filename} not found."
 	end
+end
+
+def read_file(everything)
+	database_contents = load_database_file
 	if (everything == true)
 		if (ARGV[1] == nil)
 			database_contents.each do |a|
@@ -60,17 +69,23 @@ def load_file(everything)
 			end
 		end
 	else
+		content = ""
 		database_contents.each do |a|
 			if (a[3] == '0')
-				puts "==========================================="
-				puts "Barcode:       " << a[0]
-				puts "Item Name:     " << a[1]
-				puts "Item Category: " << a[2]
-				puts "Quantity:      " << a[3]
-				puts "Price:         " << a[4]
-				puts "Description:   " << a[5]
-				print "\n"
+				content += "===========================================\n"
+				content += "Barcode:       " << a[0] + "\n"
+				content += "Item Name:     " << a[1] + "\n"
+				content += "Item Category: " << a[2] + "\n"
+				content += "Quantity:      " << a[3] + "\n"
+				content += "Price:         " << a[4] + "\n"
+				content += "Description:   " << a[5] + "\n"
+				content += "\n"
 			end
+		end
+		if (content == "")
+			puts "No database records found with zero quantity."
+		else
+			puts content
 		end
 	end
 end
@@ -82,25 +97,11 @@ def update_inventory
 	else
 		if (!ARGV[1].to_s.end_with?(".csv") || ARGV[1] == nil)
 			puts "\nInvalid file format – unable to proceed."
-			puts "Usage: ruby inventory.rb [?|-h|help|[-u|-o|-z <infile>|[<outfile>]]]"
+			puts "Usage: ruby inventory.rb [?|-h|help|[-u|-o|-z <infile>|[<outfile>]]]\n"
 		else
 			filename = "./" << ARGV[1]
 
-			# Attempt to open user csv file. If not found, abort program.
-			begin
-				data_file = File.open($database_filename)
-			# Instead of asking for new file name, abort if file not found.
-			rescue
-				abort "Database file not found - aborting."
-			end
-
-			csv_input = Array.new{Array.new}
-
-			i = 0
-			data_file.each do |line|
-				csv_input[i] = line.split(",").map(&:strip)
-				i += 1
-			end
+			database_contents = load_database_file
 
 			# Attempt to open user csv file. If not found, abort program.
 			begin
@@ -111,11 +112,11 @@ def update_inventory
 			end
 
 			CSV.foreach(filename) do |row|
-				csv_input << row
+				database_contents << row
 			end
 
 			CSV.open($database_filename, "w") do |csv|
-				csv_input.each do |a|
+				database_contents.each do |a|
 					csv << [a[0], a[1], a[2], a[3], a[4], a[5]]
 				end
 			end
@@ -126,20 +127,37 @@ def update_inventory
 	end
 end
 
+def search_database(user_input)
+	database_contents = load_database_file
+	content = ""
+	database_contents.each do |a|
+		if (a[0] == user_input)
+			content += "Barcode " + user_input + " found in the database. Details are given below.\n"
+			content += "   Item Name: " << a[1] + "\n"
+			content += "   Item Category: " << a[2] + "\n"
+			content += "   Quantity: " << a[3] + "\n"
+			content += "   Price: " << a[4] + "\n"
+			content += "   Description: " << a[5] + "\n"
+			content += "\n"
+		end
+	end
+	if (content == "")
+		puts "Barcode " + user_input + " NOT found in the database. Do you want to enter information? [Y/N]: "
+	else
+		puts content
+	end
+end
+
 if (ARGV[0] == "?" or ARGV[0] == "-h" or ARGV[0] == "help")
 	display_help
 elsif (ARGV[0] == "-u")
-	if (ARGV[1] == nil)
-		puts "You must include a file."
-	else
-		if (!ARGV[1].to_s.end_with?(".csv"))
-			puts "The filename is not of type CSV."
-		else
-			update_inventory
-		end
-	end
+	update_inventory
 elsif (ARGV[0] == "-o")
-	load_file(true)
+	read_file(true)
 elsif (ARGV[0] == "-z")
-	load_file(false)
+	read_file(false)
+elsif (ARGV[0] == nil)
+	print "> "
+	user_input = gets.strip
+	search_database(user_input)
 end
