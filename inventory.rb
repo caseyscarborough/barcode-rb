@@ -49,12 +49,8 @@ def load_file(everything)
 		else
 			new_filename = ARGV[1].to_s
 			if (new_filename.end_with?(".tsv"))
-				if (File.file?(new_filename))
-					File.delete(new_filename)
-				end
-				database_contents.each do |a|
-					require 'csv'
-					CSV.open(new_filename, "ab", {:col_sep => "\t"}) do |csv|
+				CSV.open(new_filename, "w", {:col_sep => "\t"}) do |csv|
+					database_contents.each do |a|
 					  csv << [a[0], a[1], a[2], a[3], a[4], a[5]]
 					end
 				end
@@ -64,15 +60,17 @@ def load_file(everything)
 			end
 		end
 	else
-		if (a[3] == '0')
-			puts "==========================================="
-			puts "Barcode:       " << a[0]
-			puts "Item Name:     " << a[1]
-			puts "Item Category: " << a[2]
-			puts "Quantity:      " << a[3]
-			puts "Price:         " << a[4]
-			puts "Description:   " << a[5]
-			print "\n"
+		database_contents.each do |a|
+			if (a[3] == '0')
+				puts "==========================================="
+				puts "Barcode:       " << a[0]
+				puts "Item Name:     " << a[1]
+				puts "Item Category: " << a[2]
+				puts "Quantity:      " << a[3]
+				puts "Price:         " << a[4]
+				puts "Description:   " << a[5]
+				print "\n"
+			end
 		end
 	end
 end
