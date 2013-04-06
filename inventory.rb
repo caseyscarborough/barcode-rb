@@ -1,4 +1,5 @@
 #!/Users/Casey/.rvm/rubies/ruby-2.0.0-rc1/bin/ruby
+require 'csv'
 
 #Get the command-line arguments
 ARGV.each do|a|
@@ -30,25 +31,17 @@ Parameters:
 end
 
 def load_file(everything)
-	database_file = File.open("/Volumes/Storage/Dropbox/Documents/Schoolwork/Spring 2013/Programming Languages/Homework/Ruby Inventory Application/inventory.db")
+	filename = "./inventory.db"
+	database_file = File.open(filename)
 	database_contents = Array.new{Array.new}
 	i = 0
 	database_file.each do |line|
 		database_contents[i] = line.split(",").map(&:strip)
 		i += 1
 	end
-	database_contents.each do |a|
-		if (everything == true)
-			puts "==========================================="
-			puts "Barcode:       " << a[0]
-			puts "Item Name:     " << a[1]
-			puts "Item Category: " << a[2]
-			puts "Quantity:      " << a[3]
-			puts "Price:         " << a[4]
-			puts "Description:   " << a[5]
-			print "\n"
-		else
-			if (a[3] == '0')
+	if (everything == true)
+		if (ARGV[1] == nil)
+			database_contents.each do |a|
 				puts "==========================================="
 				puts "Barcode:       " << a[0]
 				puts "Item Name:     " << a[1]
@@ -58,6 +51,28 @@ def load_file(everything)
 				puts "Description:   " << a[5]
 				print "\n"
 			end
+		else
+			new_filename = ARGV[1].to_s
+			if (File.file?(new_filename))
+				File.delete(new_filename)
+			end
+			database_contents.each do |a|
+				require 'csv'
+					CSV.open(new_filename, "ab") do |csv|
+					  csv << [a[0], a[1], a[2], a[3], a[4], a[5]]
+				end
+			end
+		end
+	else
+		if (a[3] == '0')
+			puts "==========================================="
+			puts "Barcode:       " << a[0]
+			puts "Item Name:     " << a[1]
+			puts "Item Category: " << a[2]
+			puts "Quantity:      " << a[3]
+			puts "Price:         " << a[4]
+			puts "Description:   " << a[5]
+			print "\n"
 		end
 	end
 end
