@@ -2,12 +2,12 @@ Ruby Barcode and Inventory Application
 ======================================
 
 This is an application written in Ruby v2.0.0 that reads a barcode by using a barcode scanner or from the keyboard by typing the numeric representation of the barcode. Once a barcode is read into the application, the database file will be searched. If found the information for the item will be given in the following format:
-		<code>Barcode 9780321545893 found in the database. Details are given below:<br>
-		  Item Name: Artificial Intelligence<br>
-		  Item Category: Book<br>
-		  Quantity: 2<br>
-		  Price: 129.00<br>
-		  Description: Addison Wesley Publ.</code>
+<pre>Barcode 9780321545893 found in the database. Details are given below:<br>
+  Item Name: Artificial Intelligence<br>
+  Item Category: Book<br>
+  Quantity: 2<br>
+  Price: 129.00<br>
+  Description: Addison Wesley Publ.</pre>
 
 If the item is not found in the database, then the user is given the option to add the information for the specified item into the database.
 
