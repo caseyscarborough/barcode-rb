@@ -210,16 +210,17 @@ def add_information(bc)
 	puts "Information successfully added!"
 end
 
+# This function writes the current database contents back to the file.
 def write_to_file(database_contents)
-	begin
+	begin # Try to open the file for writing and write data
 		CSV.open($database_filename, "w") do |csv|
 			database_contents.each do |a|
 				csv << [a[0], a[1], a[2], a[3], a[4], a[5]]
 			end
 		end
-	rescue
+	rescue # catch any errors
 		puts "There was a problem updating the database."
-	end
+	end # print success message
 	print "\nQuantity successfully updated!\n"
 end
 
@@ -230,24 +231,24 @@ def search_database(user_input, database_contents)
 	content = "" # set variable to hold content
 	database_contents.each do |a|
 		if (a[0] == user_input) # if any matching barcodes append content
-			if (a[3] == "0")
+			if (a[3] == "0") # if quantity == 0
 				user_decision = ""
-				loop do
+				loop do # ask the user if they'd like to update quantity
 					print "\nBarcode " + user_input + " found in the database but has a zero quantity. Do you want to update quantity? [Y/N]: "
-					user_decision = gets.strip.upcase
+					user_decision = gets.strip.upcase # get user input and break when Y or N
 					break if (user_decision == "Y" || user_decision == "N")
 				end
 				if (user_decision == "Y")
 					quantity = 0
-					loop do
+					loop do # get new quantity
 						print "Enter the new quantity: [> 0]: "
 						# convert the input to an integer, will convert to 0 if not an int
 						quantity = gets.strip.to_i
 						break if (quantity > 0)
-					end
+					end # set quantity == new quantity and write to file
 					a[3] = quantity.to_s
 					write_to_file(database_contents)
-				end
+				end # output item details
 				content += "Details are given below.\n"
 				content += "   Item Name: " << a[1] + "\n"
 				content += "   Item Category: " << a[2] + "\n"
@@ -255,7 +256,7 @@ def search_database(user_input, database_contents)
 				content += "   Price: " << a[4] + "\n"
 				content += "   Description: " << a[5] + "\n"
 				content += "\n"
-			else
+			else # if the quantity is not zero, output item details
 				content += "\nBarcode " + user_input + " found in the database. Details are given below.\n"
 				content += "   Item Name: " << a[1] + "\n"
 				content += "   Item Category: " << a[2] + "\n"
