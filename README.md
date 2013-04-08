@@ -16,3 +16,11 @@ The user may also update the database file using the contents of a comma-separat
 The contents of the database can also be printed out using the -o flag. This will print out all information for all records in the database file. If the user uses the -z flag instead of the -o flag, only the records with a zero quantity will be displayed. The information for the -o or the -z flags can be output to a file by specifying a .tsv file after the argument.
 
 By default, the database file is located in the same directory as the program, but it can be changed to a different filename or an absolute file path using the global variable at the beginning of the inventory.rb file.
+
+
+MySQL Implementation
+--------------------
+
+Included in the mysql folder is the exact implementation of this application but using a MySQL database instead of the database file. One option is added, the -d flag gives the user the option to delete an item from the database.
+
+The mysql ruby gem is required for this implementation to work properly, and by default connects to a localhost mysql instance, with the username root, password root. Included is a SQL file with the imports to populate the database.
