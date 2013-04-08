@@ -65,16 +65,24 @@ def read_file(everything)
 	# if the -o argument was specified
 	if (everything == true)
 		if (ARGV[1] == nil) # if no file was specified, output to screen
+			content = ""
 			database_contents.each do |a|
-				puts "==========================================="
-				puts "Barcode:       " << a[0]
-				puts "Item Name:     " << a[1]
-				puts "Item Category: " << a[2]
-				puts "Quantity:      " << a[3]
-				puts "Price:         " << a[4]
-				puts "Description:   " << a[5]
-				print "\n"
+				content += "| #{a[0]}".ljust(17)
+				content += "| #{a[1]}".ljust(34)
+				content += "| #{a[2]}".ljust(18)
+				content += "| #{a[3]}".ljust(11)
+				content += "| #{a[4]}".ljust(10)
+				content += "| #{a[5]}".ljust(29)
+				content += " |".ljust(17) + "\n"
 			end
+			puts "\n+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
+			puts "| Barcode".ljust(17) + "| Item Name:".ljust(34) + 
+				"| Item Category".ljust(18) + "| Quantity".ljust(11) + 
+				"| Price".ljust(10) + "| Description".ljust(29) + " |"
+			puts "+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
+			print content
+			puts "+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
+			print "\n"
 		else # output to a file
 			# set the filename and check if it is a TSV file
 			new_filename = ARGV[1].to_s
@@ -88,7 +96,7 @@ def read_file(everything)
 				end
 				puts "File was successfully created!"
 			else # give an error
-				puts "File format must be .tsv!"
+				abort "Invalid file format – unable to proceed."
 			end
 		end
 	else # if the -z argument was specified
@@ -96,20 +104,26 @@ def read_file(everything)
 			content = "" # set variable to hold content
 			database_contents.each do |a|
 				if (a[3] == '0') # if the item has a zero quantity add it to content
-					content += "===========================================\n"
-					content += "Barcode:       " << a[0] + "\n"
-					content += "Item Name:     " << a[1] + "\n"
-					content += "Item Category: " << a[2] + "\n"
-					content += "Quantity:      " << a[3] + "\n"
-					content += "Price:         " << a[4] + "\n"
-					content += "Description:   " << a[5] + "\n"
-					content += "\n"
+					content += "| #{a[0]}".ljust(17)
+					content += "| #{a[1]}".ljust(34)
+					content += "| #{a[2]}".ljust(18)
+					content += "| #{a[3]}".ljust(11)
+					content += "| #{a[4]}".ljust(10)
+					content += "| #{a[5]}".ljust(29)
+					content += " |".ljust(17) + "\n"
 				end
 			end
 			if (content == "") # if no content was found
 				puts "No database records found with zero quantity."
 			else # output content
-				puts content
+				puts "\n+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
+				puts "| Barcode".ljust(17) + "| Item Name:".ljust(34) + 
+					"| Item Category".ljust(18) + "| Quantity".ljust(11) + 
+					"| Price".ljust(10) + "| Description".ljust(29) + " |"
+				puts "+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
+				print content
+				puts "+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
+				print "\n"
 			end
 		else # output to a file
 			# set the filename and check if it is a TSV file
@@ -126,7 +140,7 @@ def read_file(everything)
 				end
 				puts "File was successfully created!"
 			else # give an error
-				puts "File format must be .tsv!"
+				abort "Invalid file format – unable to proceed."
 			end
 		end
 	end
@@ -137,13 +151,11 @@ end # read_file
 def update_inventory
 	# if the user did not specify an infile
 	if (ARGV[1] == nil)
-		puts "\n-u requires an <infile>"
-		puts "Usage: ruby inventory.rb [?|-h|help|[-u|-o|-z <infile>|[<outfile>]]]"
+		puts "The -u option requires an <infile> of type .csv."
 	else # if they specified a file
 		# check that it ends with .csv
 		if (!ARGV[1].to_s.end_with?(".csv"))
-			puts "\nInvalid file format – unable to proceed."
-			puts "Usage: ruby inventory.rb [?|-h|help|[-u|-o|-z <infile>|[<outfile>]]]\n"
+			abort "Invalid file format – unable to proceed."
 		else # if it exists and ends with .csv
 			# set the filename and load the database contents
 			filename = "./" << ARGV[1]
@@ -198,6 +210,19 @@ def add_information(bc)
 	puts "Information successfully added!"
 end
 
+def write_to_file(database_contents)
+	begin
+		CSV.open($database_filename, "w") do |csv|
+			database_contents.each do |a|
+				csv << [a[0], a[1], a[2], a[3], a[4], a[5]]
+			end
+		end
+	rescue
+		puts "There was a problem updating the database."
+	end
+	print "\nQuantity successfully updated!\n"
+end
+
 # This function searches the database file for a barcode inputted by the 
 # user. If it is found, it displays the information. If not, it asks the
 # user if they'd like to enter the information for that barcode number.
@@ -205,13 +230,40 @@ def search_database(user_input, database_contents)
 	content = "" # set variable to hold content
 	database_contents.each do |a|
 		if (a[0] == user_input) # if any matching barcodes append content
-			content += "Barcode " + user_input + " found in the database. Details are given below.\n"
-			content += "   Item Name: " << a[1] + "\n"
-			content += "   Item Category: " << a[2] + "\n"
-			content += "   Quantity: " << a[3] + "\n"
-			content += "   Price: " << a[4] + "\n"
-			content += "   Description: " << a[5] + "\n"
-			content += "\n"
+			if (a[3] == "0")
+				user_decision = ""
+				loop do
+					print "\nBarcode " + user_input + " found in the database but has a zero quantity. Do you want to update quantity? [Y/N]: "
+					user_decision = gets.strip.upcase
+					break if (user_decision == "Y" || user_decision == "N")
+				end
+				if (user_decision == "Y")
+					quantity = 0
+					loop do
+						print "Enter the new quantity: [> 0]: "
+						# convert the input to an integer, will convert to 0 if not an int
+						quantity = gets.strip.to_i
+						break if (quantity > 0)
+					end
+					a[3] = quantity.to_s
+					write_to_file(database_contents)
+				end
+				content += "Details are given below.\n"
+				content += "   Item Name: " << a[1] + "\n"
+				content += "   Item Category: " << a[2] + "\n"
+				content += "   Quantity: " << a[3] + "\n"
+				content += "   Price: " << a[4] + "\n"
+				content += "   Description: " << a[5] + "\n"
+				content += "\n"
+			else
+				content += "\nBarcode " + user_input + " found in the database. Details are given below.\n"
+				content += "   Item Name: " << a[1] + "\n"
+				content += "   Item Category: " << a[2] + "\n"
+				content += "   Quantity: " << a[3] + "\n"
+				content += "   Price: " << a[4] + "\n"
+				content += "   Description: " << a[5] + "\n"
+				content += "\n"
+			end
 		end
 	end
 	if (content == "") # if no result
