@@ -11,7 +11,7 @@ This is an application written in Ruby v2.0.0 that reads a barcode by using a ba
 
 If the item is not found in the database, then the user is given the option to add the information for the specified item into the database.
 
-The user may also update the database file using the contents of a comma-separated-values (.csv) file that they specify. This is performed by running the application with the -u flag with a specified .csv file after it.
+The user may also update the database file using the contents of a comma-separated-values (.csv) file that they specify. This is performed by running the application with the -u flag with a specified .csv file after it. The .csv file must have quotes around each field, as shown in the sample update.csv file provided.
 
 The contents of the database can also be printed out using the -o flag. This will print out all information for all records in the database file. If the user uses the -z flag instead of the -o flag, only the records with a zero quantity will be displayed. The information for the -o or the -z flags can be output to a file by specifying a .tsv file after the argument.
 
