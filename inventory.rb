@@ -73,7 +73,7 @@ def read_file(everything)
 				content += "| #{a[3]}".ljust(11)
 				content += "| #{a[4]}".ljust(10)
 				content += "| #{a[5]}".ljust(29)
-				content += " |".ljust(17) + "\n"
+				content += " |\n"
 			end
 			puts "\n+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
 			puts "| Barcode".ljust(17) + "| Item Name:".ljust(34) + 
@@ -110,7 +110,7 @@ def read_file(everything)
 					content += "| #{a[3]}".ljust(11)
 					content += "| #{a[4]}".ljust(10)
 					content += "| #{a[5]}".ljust(29)
-					content += " |".ljust(17) + "\n"
+					content += " |\n"
 				end
 			end
 			if (content == "") # if no content was found
