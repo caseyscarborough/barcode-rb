@@ -24,3 +24,9 @@ MySQL Implementation
 Included in the mysql folder is the exact implementation of this application but using a MySQL database instead of the database file. One option is added, the -d flag gives the user the option to delete an item from the database.
 
 The mysql ruby gem is required for this implementation to work properly, and by default connects to a localhost mysql instance, with the username root, password root. Included is a SQL file with the imports to populate the database.
+
+
+Access Implementation
+---------------------
+
+Included in the access folder is the implementation of the application using an Access Database file. This is pretty much the same as the other two, with the -d option as well. No additional gems are needed, but it is used in Windows instead of a Unix environment. The ODBC driver used to connect to the database is Microsoft.Jet.OLEDB.4.0.
