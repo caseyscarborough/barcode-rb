@@ -211,6 +211,7 @@ def display_inventory(everything)
 		end
 	else # If the user specified -z
 		# Query the database and add fields and rows variables
+		db = load_database
 		db.query("SELECT * FROM items WHERE Quantity=0")
 		fields = db.fields
 		rows = db.data
