@@ -16,7 +16,45 @@ require 'csv'
 require 'win32ole' #require library for ActiveX Data Objects (ADO)
 
 # Define and set global variable for database file
-$database_file_path = "inventory.mdb"
+$database_file_path ="inventory.mdb"
+user_input = ""
+until (user_input == "Y" || user_input == "N")
+	print "Is the database file in the current working directory and named '#{$database_file_path}'? [Y/N]: "
+	user_input = $stdin.gets.strip.upcase
+end
+
+# If database file is located elsewhere get file path from user
+unless (user_input == "Y")
+	puts "Please specify the pathname where the database file is located, including file name."
+	puts "(e.g. C:\\tempdir\\inventory.accdb or D:\\Documents\\Barcode Scanner\\inventory.mdb):"
+	$database_file_path = $stdin.gets.strip
+end 
+
+# This method displays the help screen
+def help_screen
+	# define the help variable which holds the help text
+	puts "Usage: ruby inventory.rb [?|-h|help|[-u|-o|-z <infile>|[<outfile>]]]\n
+    Parameters:
+       ?                 displays this usage information
+       -h                displays this usage information
+       help              displays this usage information
+       -u <infile>       update the inventory using the file <infile>.
+                         The filename <infile> must have a .csv
+                         extension and it must be a text file in comma
+                         separated value (CSV) format. Note that the
+                         values must be in double quote.
+       -z|-o [<outfile>] output either the entire content of the
+                         database (-o) or only those records for which
+                         the quantity is zero (-z). If no <outfile> is
+                         specified then output on the console otherwise
+                         output in the text file named <outfile>. The
+                         output in both cases must be in a tab separated
+                         value (tsv) format.
+       -d                prompts the user to enter the barcode of an item
+                         to delete from the database"
+end
+
+
 
 # The class AccessDb shown below is used for database connection handling
 class AccessDb
@@ -62,7 +100,7 @@ class AccessDb
 	def execute(sql)
 		@connection.Execute(sql)
 	end
-	
+
 	# Method for deleting items from the database
 	def delete(barcode)
 		self.query("SELECT * FROM items WHERE Barcode='#{barcode}'")
@@ -78,8 +116,7 @@ class AccessDb
 			abort "Item does not exist in database."
 		end
 	end
-	
-	
+
 	# Destructor method for AccessDb Class
 	def close
 		@connection.Close
@@ -87,131 +124,126 @@ class AccessDb
 end
 
 
-# This method loads the database and returns the connection for use in other functions
-def load_database
-	user_input = ""
 
-	# Check if database file is located in cwd
-	until (user_input == "Y" || user_input == "N")
-		print "Is the database file in the current working directory and named '#{$database_file_path}'? [Y/N]: "
-		user_input = $stdin.gets.strip.upcase
+
+# This class is used for updating the database
+class Update
+	attr_accessor :query, :filename, :rows, :db
+
+	# Initializer method
+	def initialize
+		@query = "SELECT * FROM items"
+		begin # Create and open new database connection
+			@db = AccessDb.new($database_file_path)
+			@db.open
+		rescue
+			abort "Unable to continue - database file #{$database_file_path} not found."
+		end # Query the database
+		@db.query(@query)
+		@rows = @db.data
 	end
 
-	# If database file is located elsewhere get file path from user
-	unless (user_input == "Y")
-		puts "Please specify the pathname where the database file is located, including file name."
-		puts "(e.g. C:\\tempdir\\inventory.accdb or D:\\Documents\\Barcode Scanner\\inventory.mdb):"
-		$database_file_path = $stdin.gets.strip
-	end
-	begin # Create and open new database connection
-		db = AccessDb.new($database_file_path)
-		db.open
-	rescue
-		abort "Unable to continue - database file #{$database_file_path} not found."
-	end
-	return db
-end
+	# This method imports the data from the CSV file into the database
+	def import(filename)
+		begin # Attempt to open user csv file
+			csv_file = CSV.open(filename, "r")
+		rescue # Abort if file not found
+			abort "Input file #{ARGV[1]} not found - aborting."
+		end
+		# Create an array to hold the contents
+		update_contents = Array.new{Array.new}
 
-# This method displays the help screen
-def help_screen
-	# define the help variable which holds the help text
-	puts "Usage: ruby inventory.rb [?|-h|help|[-u|-o|-z <infile>|[<outfile>]]]\n
-    Parameters:
-       ?                 displays this usage information
-       -h                displays this usage information
-       help              displays this usage information
-       -u <infile>       update the inventory using the file <infile>.
-                         The filename <infile> must have a .csv
-                         extension and it must be a text file in comma
-                         separated value (CSV) format. Note that the
-                         values must be in double quote.
-       -z|-o [<outfile>] output either the entire content of the
-                         database (-o) or only those records for which
-                         the quantity is zero (-z). If no <outfile> is
-                         specified then output on the console otherwise
-                         output in the text file named <outfile>. The
-                         output in both cases must be in a tab separated
-                         value (tsv) format.
-       -d                prompts the user to enter the barcode of an item
-                         to delete from the database"
-end
+		# Put the contents of the file into the array
+		CSV.foreach(filename) { |row| update_contents << row }
 
-# This method updates the database file using the .csv with the -u argument
-def update_inventory
-	if (ARGV[1] == nil) # The user did not specify a filename
-		abort "The -u argument requires an <infile>"
-	else # The file was not a csv file
-		if (!ARGV[1].to_s.end_with?(".csv") || ARGV[1] == nil)
-			puts "Invalid file format -- Unable to proceed."
-		else
-			# Get the filename and load the database file
-			filename = ARGV[1]
-			db = load_database
-			
-			begin # Attempt to open user csv file
-				csv_file = CSV.open(filename, "r")
-			rescue # Abort if file not found
-				abort "Input file #{ARGV[1]} not found - aborting."
-			end
-			# Create an array to hold the contents
-			update_contents = Array.new{Array.new}
-			
-			# Put the contents of the file into the array
-			CSV.foreach(filename) { |row| update_contents << row }
-			
-			# Loop through the array adding the items to the database
-			update_contents.each do |item|
-				begin
-					db.execute("INSERT INTO items VALUES('#{item[0]}', '#{item[1]}', '#{item[2]}', #{item[3]}, #{item[4]}, '#{item[5]}')")
-				rescue
-					abort "There was a problem inserting into the database. Please ensure that there are no duplicate barcodes in the database and the update file."
+		found_match = false
+		update_count = 0
+		# Loop through the array adding the items to the database
+		update_contents.each do |item|
+			quantity = 0
+			# See if a barcode match exists in the database
+			@rows.each do |a|
+				if (item[0] == a[0])
+					found_match = true
+					quantity = item[3].to_i
+					quantity += a[3].to_i
+					break
 				end
 			end
-			# Update successful
-			puts "Updated #{csv_file.count} database records successfully"
+			if (found_match == true)
+				begin # If a match was found, update that barcode
+					query = "UPDATE items SET Barcode=#{item[0]}, ItemName='#{item[1]}', ItemCategory='#{item[2]}', Quantity=#{quantity}, Price=#{item[4]}, Description='#{item[5]}' WHERE Barcode='#{item[0]}'"
+					@db.execute(query)
+					puts "Updated barcode #{item[0]}"
+					found_match = false
+					update_count += 1
+				rescue
+					abort "There was a problem updating the item in the database."
+				end
+			else # If a match wasn't found, insert that barcode
+				begin
+					@db.execute("INSERT INTO items VALUES('#{item[0]}', '#{item[1]}', '#{item[2]}', #{item[3]}, #{item[4]}, '#{item[5]}')")
+					puts "Inserted barcode #{item[0]}"
+					update_count += 1
+				rescue
+					abort "There was a problem inserting into the database."
+				end
+			end
 		end
+		# Update successful
+		puts "Updated #{update_count} database records successfully"
 	end
 end
 
-# This method displays the inventory and is called when user puts -o|-z <outfile>
-def display_inventory(everything)
-	db = load_database
-	# If user specifies -o, get everything, else only 0 quantity items
-	if (everything == true) then query = "SELECT * FROM items";
-	else query = "SELECT * FROM items WHERE Quantity=0"; end;
-	# Query the database and get the rows array
-	db.query(query)
-	rows = db.data
-	
-	if (ARGV[1] == nil) # If the user did not specify a filename
+
+# This class is used to display information from the database
+class Display
+	# Accessors for the class
+	attr_accessor :query, :all, :rows, :filename
+
+	# Class constructor
+	def initialize (all = true)
+		@all = all
+		if (@all == false) 
+			@query = "SELECT * FROM items WHERE Quantity=0"
+		else @query = "SELECT * FROM items"
+		end
+
+		# New database instance
+		begin # Create and open new database connection
+			@db = AccessDb.new($database_file_path)
+			@db.open
+		rescue
+			abort "Unable to continue - database file #{$database_file_path} not found."
+		end
+		# Query the database and get the rows
+		@db.query(@query)
+		@rows = @db.data
+	end
+
+	# This method displays the data onto the screen
+	def display
 		# Set up output table and display data
-		puts "\n+----------------+---------------------------------+------" +
-			"-----------+----------+---------+-----------------------------+"
+		puts "\n+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
 		puts "| Barcode".ljust(17) + "| Item Name:".ljust(34) + 
 			"| Item Category".ljust(18) + "| Quantity".ljust(11) + 
 			"| Price".ljust(10) + "| Description".ljust(29) + " |"
-		puts "+----------------+---------------------------------+--------" +
-			"---------+----------+---------+-----------------------------+"
-		rows.each do |item|
-			print "| #{item[0]}".ljust(17)
-			print "| #{item[1]}".ljust(34)
-			print "| #{item[2]}".ljust(18)
-			print "| #{item[3]}".ljust(11)
-			print "| #{item[4]}".ljust(10)
-			print "| #{item[5]}".ljust(29)
-			print " |\n"
+		puts "+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
+		@rows.each do |item|
+			print "| #{item[0]}".ljust(17) + "| #{item[1]}".ljust(34) + "| #{item[2]}".ljust(18) + "| #{item[3]}".ljust(11) + "| #{item[4]}".ljust(10) + "| #{item[5]}".ljust(29) + " |\n"
 		end
-		puts "+----------------+---------------------------------+--------" +
-			"---------+----------+---------+-----------------------------+"
-		print "\n"
-	else # If the user specified a file, output it to a TSV
-		new_filename = ARGV[1].to_s
-		if (new_filename.end_with?(".tsv"))
-			CSV.open(new_filename, "w", {:col_sep => "\t"}) do |csv|
+		puts "+----------------+---------------------------------+-----------------+----------+---------+-----------------------------+"
+	end
+
+	# This method exports the data to a text file
+	def export(filename)
+		@filename = filename
+		if (@filename.end_with?(".tsv"))
+			CSV.open(@filename, "w", {:col_sep => "\t"}) do |csv|
 				rows.each { |item| csv << [item[0], item[1], item[2], item[3], item[4], item[5]] }
 			end
 			puts "File was successfully created!"
-		else puts "File format must be .tsv!"
+		else abort "File format must be .tsv!"
 		end
 	end
 end
@@ -229,7 +261,7 @@ def new_db_entry(barcode,db)
 	price = $stdin.gets.strip
 	print "Enter the description: "
 	description = $stdin.gets.strip
-	
+
 	begin # Execute insert statement to add item to the database
 		db.execute("INSERT INTO items VALUES ('#{barcode}', '#{item_name}', '#{item_category}', #{quantity}, #{price}, '#{description}')")
 	rescue 
@@ -244,7 +276,7 @@ def search_inventory(barcode,db)
 	# Query the database
 	db.query("SELECT * FROM items WHERE Barcode='#{barcode}'")
 	rows = db.data
-	
+
 	if (rows.count == 1) # If the item was found
 		rows.each do |item| # Loop through each row
 			if (item[3] == 0) # If it has zero quantity
@@ -288,13 +320,13 @@ def search_inventory(barcode,db)
 		end
 	else # If the item was not found
 		user_input = ""
-	
+
 		# Prompt user if they'd like to add it
 		until (user_input == "Y" || user_input == "N")
 			print "Barcode #{barcode} NOT found in the database. Do you want to enter information? [Y/N]: "
 			user_input = gets.strip.upcase
 		end
-		
+
 		# If yes, call new_db_entry
 		if (user_input == "Y")
 			new_db_entry(barcode,db)
@@ -309,24 +341,50 @@ if (ARGV[0] == '?' || ARGV[0] == '-h' || ARGV[0] == 'help')
 	help_screen
 # If the user entered -u
 elsif (ARGV[0] == '-u')
-	update_inventory
+	if (ARGV[1] == nil) # The user did not specify a filename
+		abort "The -u argument requires an <infile>"
+	else
+		if (!ARGV[1].to_s.end_with?(".csv"))
+			abort "Invalid file format -- Unable to proceed."
+		else
+			filename = ARGV[1].to_s
+			update = Update.new
+			update.import(filename)
+		end
+	end
 # If the user entered -z or -o
 elsif (ARGV[0] == '-z' || ARGV[0] == '-o')
-	if (ARGV[0] == '-z')
-		display_inventory(false)
+	# If user entered -z, set everything to false, otherwise true
+	ARGV[0] == '-z' ? everything = false : everything = true
+
+	# Create a new instance of Display and either display it or export it
+	table = Display.new(everything)
+	if (ARGV[1] == nil)
+		table.display
 	else
-		display_inventory(true)
+		filename = ARGV[1].to_s
+		table.export(filename)
 	end
 # If the user entered -d
 elsif (ARGV[0] == '-d')
-	db = load_database
+	begin # Create and open new database connection
+		db = AccessDb.new($database_file_path)
+		db.open
+	rescue
+		abort "Unable to continue - database file #{$database_file_path} not found."
+	end
 	print "Enter the barcode of the item to delete: "
 	barcode = $stdin.gets.strip
 	db.delete(barcode)
 else # Load the database
-	dbcontents = load_database
+	begin # Create and open new database connection
+		db = AccessDb.new($database_file_path)
+		db.open
+	rescue
+		abort "Unable to continue - database file #{$database_file_path} not found."
+	end
 	print "> " # Block and wait for input
 	input = $stdin.gets.strip
 	# Search the database for matching barcode
-	search_inventory(input,dbcontents)
+	search_inventory(input,db)
 end
